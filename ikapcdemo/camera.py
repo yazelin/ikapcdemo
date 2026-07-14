@@ -199,24 +199,41 @@ class Camera:
 
     # -- capture --------------------------------------------------------------
 
+    def set_if_differs(self, name, value):
+        """Feature writes cost ~0.5s each on the U3V control channel while
+        reads are free — skip writes whose value is already in place."""
+        try:
+            current = self.get(name)
+        except b.IKapCError:
+            self.set(name, value)
+            return
+        if isinstance(current, float) or isinstance(value, float):
+            same = abs(float(current) - float(value)) < 1e-6
+        elif isinstance(current, bool) or isinstance(value, bool):
+            same = bool(current) == bool(value)
+        else:
+            same = str(current) == str(value)
+        if not same:
+            self.set(name, value)
+
     def capture(self, exposure_us=None, gain=None, size=None, timeout_ms=15000):
         """Grab one RGB frame; returns (width, height, rgb_bytes)."""
         with self._lock:
-            self.set("PixelFormat", "RGB8")
+            self.set_if_differs("PixelFormat", "RGB8")
             if not size:  # photo device: default is always the full sensor
                 size = (self.get("WidthMax"), self.get("HeightMax"))
-            self.set("OffsetX", 0)
-            self.set("OffsetY", 0)
-            self.set("Width", size[0])
-            self.set("Height", size[1])
+            self.set_if_differs("OffsetX", 0)
+            self.set_if_differs("OffsetY", 0)
+            self.set_if_differs("Width", size[0])
+            self.set_if_differs("Height", size[1])
             if exposure_us is not None:
                 try:
-                    self.set("ExposureAuto", "Off")
+                    self.set_if_differs("ExposureAuto", "Off")
                 except b.IKapCError:
                     pass
-                self.set("ExposureTime", float(exposure_us))
+                self.set_if_differs("ExposureTime", float(exposure_us))
             if gain is not None:
-                self.set("AnalogGain", float(gain))
+                self.set_if_differs("AnalogGain", float(gain))
             w = self.get("Width")
             h = self.get("Height")
 

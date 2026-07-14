@@ -40,5 +40,34 @@ class TestBindingsConstants(unittest.TestCase):
             self.assertIn(const, text)
 
 
+
+class TestSetIfDiffers(unittest.TestCase):
+    def _cam(self, current):
+        """不開真相機:繞過 __init__,只裝上 get/set 記錄。"""
+        from ikapcdemo.camera import Camera
+        cam = object.__new__(Camera)
+        cam.sets = []
+        cam.get = lambda name: current
+        cam.set = lambda name, value: cam.sets.append((name, value))
+        return cam
+
+    def test_skips_equal_value(self):
+        cam = self._cam(120000.0)
+        cam.set_if_differs("ExposureTime", 120000)
+        self.assertEqual(cam.sets, [])
+
+    def test_writes_changed_value(self):
+        cam = self._cam(14999.0)
+        cam.set_if_differs("ExposureTime", 120000.0)
+        self.assertEqual(cam.sets, [("ExposureTime", 120000.0)])
+
+    def test_string_compare(self):
+        cam = self._cam("RGB8")
+        cam.set_if_differs("PixelFormat", "RGB8")
+        self.assertEqual(cam.sets, [])
+        cam2 = self._cam("Mono8")
+        cam2.set_if_differs("PixelFormat", "RGB8")
+        self.assertEqual(cam2.sets, [("PixelFormat", "RGB8")])
+
 if __name__ == "__main__":
     unittest.main()
