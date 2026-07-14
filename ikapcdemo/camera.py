@@ -1,7 +1,7 @@
 """Camera: open / feature access / single-shot capture via the vendor SDK.
 
 Designed for USB3 Vision industrial cameras used as still-photo devices
-(one triggered frame at a time), e.g. MORITEX / I-Tek UA-series. The
+(one triggered frame at a time), e.g. I-Tek UA-series. The
 streaming path is the vendor's own, so exposure/gain changes do not
 destabilise the camera the way generic GenICam stacks can on this firmware.
 """

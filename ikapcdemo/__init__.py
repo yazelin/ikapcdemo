@@ -1,4 +1,4 @@
-"""ikapcdemo: single-shot capture for I-Tek / MORITEX USB3 Vision cameras
+"""ikapcdemo: single-shot capture for I-Tek USB3 Vision cameras
 via the vendor IKapC SDK (library + CLI + web UI)."""
 
 from .camera import Camera, list_cameras, to_ppm

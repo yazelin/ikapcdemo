@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ikapcdemo"
 version = "0.1.0"
-description = "Single-shot capture for I-Tek / MORITEX USB3 Vision cameras via the vendor IKapC SDK (library + CLI + web UI), pure stdlib"
+description = "Single-shot capture for I-Tek USB3 Vision cameras via the vendor IKapC SDK (library + CLI + web UI), pure stdlib"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

@@ -1,8 +1,8 @@
-# ikapcdemo — I-Tek / MORITEX USB3 Vision 拍照機(library + CLI + web UI)
+# ikapcdemo — I-Tek USB3 Vision 相機拍照工具(library + CLI + web UI)
 
-ikapcdemo 是一個純 Python(零相依,ctypes)的 I-Tek / MORITEX USB3 Vision 工業相機**單拍**工具,走原廠 IKapC SDK。同一套程式提供三種用法:當 **library** 匯入(`with Camera() as cam: ...`)、當 **CLI** 操作(`ikapcdemo snapshot -e 100000 -o shot.jpg`)、或啟動內建 **web UI** 拍照與調參。介面刻意做成與 [webcamdemo](https://github.com/yazelin/webcamdemo)/[visordemo](https://github.com/yazelin/visordemo) 同一家族,消費端(如品檢站)換掉 `camera_factory` 即可在 USB webcam、VISOR、USB3 Vision 相機之間切換。
+ikapcdemo 是一個純 Python(零相依,ctypes)的 I-Tek USB3 Vision 工業相機**單拍**工具,走原廠 IKapC SDK。同一套程式提供三種用法:當 **library** 匯入(`with Camera() as cam: ...`)、當 **CLI** 操作(`ikapcdemo snapshot -e 100000 -o shot.jpg`)、或啟動內建 **web UI** 拍照與調參。介面刻意做成與 [webcamdemo](https://github.com/yazelin/webcamdemo)/[visordemo](https://github.com/yazelin/visordemo) 同一家族,消費端(如品檢站)換掉 `camera_factory` 即可在 USB webcam、VISOR、USB3 Vision 相機之間切換。
 
-實機驗證:MORITEX **UA20MARU30-19C**(20MP 5496x3672,Cypress FX3 `04b4:00f0`,製造商 I-Tek OptoElectronics)@ Ubuntu 24.04。
+實機驗證:I-Tek **UA20MARU30-19C**(20MP 5496x3672,Cypress FX3 `04b4:00f0`,配 MORITEX 鏡頭)@ Ubuntu 24.04。
 
 ## 為什麼走原廠 SDK 而不是 Aravis
 
@@ -13,7 +13,7 @@ ikapcdemo 是一個純 Python(零相依,ctypes)的 I-Tek / MORITEX USB3 Vision �
 
 ## 前置需求
 
-1. 原廠 **IKapInstall** SDK(Linux x86_64;向 MORITEX / I-Tek 索取),`sudo ./install.sh` 會裝好 `libIKapC`、udev rule 與 GRUB 的 `usbcore.usbfs_memory_mb=2000`
+1. 原廠 **IKapInstall** SDK(Linux x86_64;向 I-Tek / 代理商索取),`sudo ./install.sh` 會裝好 `libIKapC`、udev rule 與 GRUB 的 `usbcore.usbfs_memory_mb=2000`
 2. `ffmpeg`(存 `.jpg` 時用;存 `.ppm` 則零相依)
 
 ## 安裝
