@@ -11,7 +11,13 @@
   header { padding: .6em 1em; background: #0e1013; font-weight: 600; }
   main { display: flex; flex-wrap: wrap; gap: 1em; padding: 1em; }
   #left { flex: 1 1 560px; min-width: 320px; }
-  #shot { width: 100%; background: #000; border-radius: 6px; min-height: 240px; }
+  #viewer { position: relative; width: 100%; height: 62vh; background: #000;
+            border-radius: 6px; overflow: hidden; cursor: grab; touch-action: none; }
+  #viewer.dragging { cursor: grabbing; }
+  #shot { position: absolute; left: 0; top: 0; transform-origin: 0 0;
+          user-select: none; -webkit-user-drag: none; }
+  #zoom { position: absolute; right: .6em; bottom: .5em; background: rgba(0,0,0,.55);
+          padding: .15em .6em; border-radius: 4px; font-size: .85em; pointer-events: none; }
   #right { flex: 1 1 380px; min-width: 320px; max-height: 88vh; overflow-y: auto;
            background: #1d2026; border-radius: 6px; padding: 1em; }
   button { background: #2c66d9; color: #fff; border: 0; border-radius: 4px;
@@ -36,7 +42,10 @@
 <header>ikapcdemo — I-Tek / MORITEX USB3 Vision 拍照機</header>
 <main>
   <div id="left">
-    <img id="shot" alt="按「拍一張」取像">
+    <div id="viewer">
+      <img id="shot" alt="按「拍一張」取像">
+      <span id="zoom"></span>
+    </div>
     <div id="bar">
       <button id="snap">拍一張</button>
       <label>曝光 µs <input id="exposure" type="number" placeholder="相機現值"></label>
@@ -158,6 +167,76 @@ $("snap").onclick = async () => {
 
 $("reload").onclick = loadFeatures;
 loadFeatures();
+
+// -- 縮放檢視器:滾輪縮放(以游標為中心)、拖曳平移、雙擊 1x/4x --
+const viewer = $("viewer"), shot = $("shot"), zoomEl = $("zoom");
+let scale = 1, tx = 0, ty = 0, fit = 1;
+
+function applyTransform() {
+  const s = fit * scale;
+  // 邊界:至少留一角在視窗內
+  const w = shot.naturalWidth * s, h = shot.naturalHeight * s;
+  tx = Math.min(viewer.clientWidth * .5, Math.max(viewer.clientWidth * .5 - w, tx));
+  ty = Math.min(viewer.clientHeight * .5, Math.max(viewer.clientHeight * .5 - h, ty));
+  shot.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+  zoomEl.textContent = scale <= 1 ? "" : scale.toFixed(1) + "x(雙擊還原)";
+}
+
+function resetView() {
+  if (!shot.naturalWidth) return;
+  fit = Math.min(viewer.clientWidth / shot.naturalWidth,
+                 viewer.clientHeight / shot.naturalHeight);
+  scale = 1;
+  tx = (viewer.clientWidth - shot.naturalWidth * fit) / 2;
+  ty = (viewer.clientHeight - shot.naturalHeight * fit) / 2;
+  applyTransform();
+}
+
+shot.addEventListener("load", resetView);
+window.addEventListener("resize", resetView);
+
+viewer.addEventListener("wheel", e => {
+  if (!shot.naturalWidth) return;
+  e.preventDefault();
+  const rect = viewer.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const next = Math.min(16, Math.max(1, scale * (e.deltaY < 0 ? 1.25 : 0.8)));
+  const k = next / scale;
+  tx = mx - (mx - tx) * k;
+  ty = my - (my - ty) * k;
+  scale = next;
+  applyTransform();
+}, {passive: false});
+
+viewer.addEventListener("dblclick", e => {
+  if (!shot.naturalWidth) return;
+  if (scale > 1) { resetView(); return; }
+  const rect = viewer.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const k = 4;
+  tx = mx - (mx - tx) * k;
+  ty = my - (my - ty) * k;
+  scale = 4;
+  applyTransform();
+});
+
+let drag = null;
+viewer.addEventListener("pointerdown", e => {
+  drag = {x: e.clientX, y: e.clientY};
+  viewer.classList.add("dragging");
+  viewer.setPointerCapture(e.pointerId);
+});
+viewer.addEventListener("pointermove", e => {
+  if (!drag) return;
+  tx += e.clientX - drag.x;
+  ty += e.clientY - drag.y;
+  drag = {x: e.clientX, y: e.clientY};
+  applyTransform();
+});
+viewer.addEventListener("pointerup", () => {
+  drag = null;
+  viewer.classList.remove("dragging");
+});
 </script>
 </body>
 </html>
