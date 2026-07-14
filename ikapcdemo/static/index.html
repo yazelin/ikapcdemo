@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ikapcdemo</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #16181d; color: #d7dae0; }
+  header { padding: .6em 1em; background: #0e1013; font-weight: 600; }
+  main { display: flex; flex-wrap: wrap; gap: 1em; padding: 1em; }
+  #left { flex: 1 1 560px; min-width: 320px; }
+  #shot { width: 100%; background: #000; border-radius: 6px; min-height: 240px; }
+  #right { flex: 1 1 380px; min-width: 320px; max-height: 88vh; overflow-y: auto;
+           background: #1d2026; border-radius: 6px; padding: 1em; }
+  button { background: #2c66d9; color: #fff; border: 0; border-radius: 4px;
+           padding: .5em 1.2em; font-size: 1em; cursor: pointer; }
+  button:disabled { opacity: .5; }
+  .row { display: flex; align-items: center; gap: .5em; margin: .35em 0; }
+  .row label { flex: 0 0 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row input[type=number], .row select { flex: 1; background: #14161a; color: inherit;
+      border: 1px solid #33363d; border-radius: 4px; padding: .25em .4em; min-width: 0; }
+  .row .ro { opacity: .65; }
+  #bar { display: flex; gap: .8em; align-items: center; margin: .6em 0; flex-wrap: wrap; }
+  #bar label { opacity: .8; }
+  #bar input { width: 8em; background: #14161a; color: inherit;
+      border: 1px solid #33363d; border-radius: 4px; padding: .3em .4em; }
+  #err { color: #ff7a7a; min-height: 1.4em; }
+  footer { padding: .8em 1em; opacity: .6; font-size: .85em; }
+  footer a { color: #8ab4ff; text-decoration: none; margin-right: 1.2em; }
+  h3 { margin: .2em 0 .5em; font-size: 1em; opacity: .8; }
+</style>
+</head>
+<body>
+<header>ikapcdemo — I-Tek / MORITEX USB3 Vision 拍照機</header>
+<main>
+  <div id="left">
+    <img id="shot" alt="按「拍一張」取像">
+    <div id="bar">
+      <button id="snap">拍一張</button>
+      <label>曝光 µs <input id="exposure" type="number" placeholder="相機現值"></label>
+      <label>增益 <input id="gain" type="number" step="0.1" placeholder="相機現值"></label>
+      <span id="stat"></span>
+    </div>
+    <div id="err"></div>
+  </div>
+  <div id="right">
+    <h3>Features <button id="reload" style="float:right;font-size:.85em;padding:.2em .6em">重新整理</button></h3>
+    <div id="features">載入中…</div>
+  </div>
+</main>
+<footer>
+  <a href="https://github.com/yazelin/ikapcdemo">GitHub</a>
+  <a href="https://www.facebook.com/yaze.lin.gm">Facebook</a>
+  <a href="https://buymeacoffee.com/yazelin">Buy Me a Coffee</a>
+</footer>
+<script>
+const $ = id => document.getElementById(id);
+const TYPE = {1:"int",2:"int",3:"float",4:"float",5:"bool",6:"enum",7:"string",8:"command"};
+
+async function api(path, body) {
+  const res = await fetch(path, body ? {method:"POST", body: JSON.stringify(body)} : {});
+  const data = await res.json();
+  if (data && data.error) throw new Error(data.error);
+  return data;
+}
+
+function showError(msg) { $("err").textContent = msg || ""; }
+
+function render(features) {
+  const box = $("features");
+  box.innerHTML = "";
+  for (const f of features) {
+    const row = document.createElement("div");
+    row.className = "row";
+    const label = document.createElement("label");
+    label.textContent = f.name;
+    label.title = f.name;
+    row.appendChild(label);
+    const kind = TYPE[f.type] || "string";
+    const ro = f.access === 2;
+    let input;
+    if (kind === "command") {
+      input = document.createElement("button");
+      input.textContent = "執行";
+      input.style.padding = ".2em .8em";
+      input.onclick = () => setFeature(f.name, 1);
+    } else if (kind === "enum") {
+      input = document.createElement("select");
+      for (const e of f.entries || []) {
+        const o = document.createElement("option");
+        o.value = o.textContent = e;
+        if (e === f.value) o.selected = true;
+        input.appendChild(o);
+      }
+      input.disabled = ro;
+      input.onchange = () => setFeature(f.name, input.value);
+    } else if (kind === "bool") {
+      input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = !!f.value;
+      input.disabled = ro;
+      input.onchange = () => setFeature(f.name, input.checked);
+    } else {
+      input = document.createElement("input");
+      input.type = (kind === "int" || kind === "float") ? "number" : "text";
+      if (kind === "float") input.step = "any";
+      input.value = f.value ?? "";
+      if ("min" in f) { input.min = f.min; input.max = f.max; }
+      if (f.inc && f.inc > 1) input.step = f.inc;
+      input.readOnly = ro;
+      if (ro) input.classList.add("ro");
+      else input.onchange = () => setFeature(f.name,
+          kind === "int" ? parseInt(input.value, 10)
+        : kind === "float" ? parseFloat(input.value) : input.value);
+    }
+    row.appendChild(input);
+    box.appendChild(row);
+  }
+}
+
+async function loadFeatures() {
+  try { render(await api("/api/features")); showError(); }
+  catch (e) { showError("讀取 features 失敗:" + e.message); }
+}
+
+async function setFeature(name, value) {
+  try {
+    const res = await api("/api/feature", {name, value});
+    render(res.features);
+    showError();
+  } catch (e) { showError(name + " 設定失敗:" + e.message); loadFeatures(); }
+}
+
+$("snap").onclick = async () => {
+  $("snap").disabled = true;
+  $("stat").textContent = "取像中…";
+  showError();
+  const q = new URLSearchParams();
+  if ($("exposure").value) q.set("exposure", $("exposure").value);
+  if ($("gain").value) q.set("gain", $("gain").value);
+  q.set("t", Date.now());
+  const img = $("shot");
+  const t0 = performance.now();
+  try {
+    const res = await fetch("/snapshot.jpg?" + q);
+    if (!res.ok) throw new Error((await res.json()).error || res.status);
+    img.src = URL.createObjectURL(await res.blob());
+    $("stat").textContent = ((performance.now() - t0) / 1000).toFixed(1) + "s";
+    loadFeatures();  // exposure/gain may have moved
+  } catch (e) {
+    $("stat").textContent = "";
+    showError("取像失敗:" + e.message);
+  }
+  $("snap").disabled = false;
+};
+
+$("reload").onclick = loadFeatures;
+loadFeatures();
+</script>
+</body>
+</html>
